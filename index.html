@@ -121,7 +121,7 @@
     <!-- Top Control Row -->
     <div class="top-controls">
       <label for="totalCash">Total Cash Available:</label>
-      <input type="number" id="totalCash" value="1000000" min="0" onblur="saveData()" />
+      <input type="number" id="totalCash" value="0" min="0" onblur="saveData()" />
       
       <label for="leaderPercent">%</label>
       <input type="number" id="leaderPercent" value="0" min="0" max="100" />
@@ -134,10 +134,10 @@
     <!-- Global Controls Row -->
     <div class="global-controls">
       <label for="globalWarPay">War Pay:</label>
-      <input type="number" id="globalWarPay" value="500" min="0" />
+      <input type="number" id="globalWarPay" value="0" min="0" />
       
       <label for="globalChainPay">Chain Pay:</label>
-      <input type="number" id="globalChainPay" value="300" min="0" />
+      <input type="number" id="globalChainPay" value="0" min="0" />
     </div>
 
     <!-- Payout Table -->
@@ -213,8 +213,7 @@
         });
       } else {
         // If no saved data, add sample rows.
-        addRow('Alice', 10, 5, 100, 20);
-        addRow('Bob', 8, 7, 120, 30);
+        addRow('Player:', 0, 0, 0, 0);
       }
     }
 
