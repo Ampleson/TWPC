@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Torn War Payout Calculator</title>
+  <style>
+    /* Global resets and box sizing for responsive layout */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #1e1e2f;
+      color: #e0e0e0;
+      padding: 1rem;
+    }
+    .container {
+      max-width: 1100px;
+      margin: auto;
+      width: 100%;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    /* Top Controls */
+    .top-controls, .global-controls, .action-controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .top-controls label, .global-controls label {
+      font-size: 1rem;
+    }
+    .top-controls input[type="number"],
+    .global-controls input[type="number"] {
+      padding: 0.5rem;
+      border: none;
+      border-radius: 4px;
+      width: 150px;
+    }
+    .top-controls span {
+      font-size: 1rem;
+    }
+    /* Table styling */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1rem;
+    }
+    th, td {
+      border-bottom: 1px solid #444;
+      padding: 0.5rem;
+      text-align: center;
+    }
+    th {
+      background-color: #2a2a40;
+    }
+    input[type="number"] {
+      padding: 0.3rem;
+      width: 100%;
+      border: 1px solid #555;
+      border-radius: 4px;
+      background-color: #333;
+      color: #e0e0e0;
+    }
+    /* Editable label for Player Name */
+    .playerName {
+      display: inline-block;
+      min-width: 100px;
+      padding: 0.3rem;
+      border-bottom: 1px dashed #888;
+      cursor: text;
+    }
+    /* Button Styles */
+    button {
+      padding: 0.5rem 0.8rem;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    .addRowBtn { background-color: #4caf50; color: white; }
+    .calcBtn { background-color: #2196F3; color: white; }
+    .leaderCutBtn { background-color: #9c27b0; color: white; }
+    .removeBtn { background-color: #f44336; color: white; }
+    .clearBtn { background-color: #ff9800; color: white; }
+    .clearAllBtn { background-color: #607d8b; color: white; }
+    /* Results */
+    .results {
+      text-align: center;
+      margin-top: 1rem;
+      font-size: 1.1rem;
+    }
+    /* Responsive Table: make sure it scrolls on smaller screens */
+    @media (max-width: 600px) {
+      table, .top-controls input, .global-controls input {
+        font-size: 0.9rem;
+      }
+      table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Torn War Payout Calculator</h1>
+    
+    <!-- Top Control Row -->
+    <div class="top-controls">
+      <label for="totalCash">Total Cash Available:</label>
+      <input type="number" id="totalCash" value="1000000" min="0" onblur="saveData()" />
+      
+      <label for="leaderPercent">%</label>
+      <input type="number" id="leaderPercent" value="0" min="0" max="100" />
+      
+      <button class="leaderCutBtn" onclick="calculateLeaderCut()">Leader Cut</button>
+      
+      <span id="leaderPay">Leader Pay: $0 | Balance: $0</span>
+    </div>
+    
+    <!-- Global Controls Row -->
+    <div class="global-controls">
+      <label for="globalWarPay">War Pay:</label>
+      <input type="number" id="globalWarPay" value="500" min="0" />
+      
+      <label for="globalChainPay">Chain Pay:</label>
+      <input type="number" id="globalChainPay" value="300" min="0" />
+    </div>
+
+    <!-- Payout Table -->
+    <table id="payoutTable">
+      <thead>
+        <tr>
+          <th>Player</th>
+          <th>War Hits</th>
+          <th>Chain Hits</th>
+          <th>Respect Earned</th>
+          <th>Respect Lost</th>
+          <th>Respect Total</th>
+          <th>War Hit Payout</th>
+          <th>Chain Hit Payout</th>
+          <th>Total Earnings</th>
+          <th>Clear/Remove</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Rows are added dynamically -->
+      </tbody>
+    </table>
+    
+    <!-- Action Controls -->
+    <div class="action-controls">
+      <button class="addRowBtn" onclick="addRow()">Add Row</button>
+      <button class="clearAllBtn" onclick="clearAllRows()">Clear All</button>
+      <button class="calcBtn" onclick="calculatePayouts()">Calculate</button>
+    </div>
+    
+    <!-- Results -->
+    <div class="results">
+      <p id="grandTotal"></p>
+    </div>
+  </div>
+
+  <script>
+    // Helper: Format money with commas and no decimals.
+    function formatMoney(num) {
+      return '$' + Number(num).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
+    // Helper: Format number with 2 decimals (for Respect Total).
+    function formatNumber(num) {
+      return Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // Save table data (player name and numeric row values) to localStorage.
+    function saveData() {
+      const data = [];
+      document.querySelectorAll('#payoutTable tbody tr').forEach(row => {
+        const player = row.cells[0].querySelector('.playerName').textContent;
+        const warHits = row.cells[1].querySelector('input').value;
+        const chainHits = row.cells[2].querySelector('input').value;
+        const respectEarned = row.cells[3].querySelector('input').value;
+        const respectLost = row.cells[4].querySelector('input').value;
+        data.push({ player, warHits, chainHits, respectEarned, respectLost });
+      });
+      localStorage.setItem("tornPayoutData", JSON.stringify(data));
+    }
+
+    // Load saved data from localStorage and populate the table.
+    function loadData() {
+      const stored = localStorage.getItem("tornPayoutData");
+      if (stored) {
+        JSON.parse(stored).forEach(rowData => {
+          addRow(
+            rowData.player,
+            rowData.warHits,
+            rowData.chainHits,
+            rowData.respectEarned,
+            rowData.respectLost
+          );
+        });
+      } else {
+        // If no saved data, add sample rows.
+        addRow('Alice', 10, 5, 100, 20);
+        addRow('Bob', 8, 7, 120, 30);
+      }
+    }
+
+    // Add a new row to the table.
+    function addRow(player = '', warHits = 0, chainHits = 0, respectEarned = 0, respectLost = 0) {
+      const tbody = document.querySelector('#payoutTable tbody');
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><span class="playerName" contenteditable="true" onblur="saveData()">${player || 'Player Name'}</span></td>
+        <td><input type="number" value="${warHits}" min="0" onblur="saveData()"/></td>
+        <td><input type="number" value="${chainHits}" min="0" onblur="saveData()"/></td>
+        <td><input type="number" value="${respectEarned}" min="0" onblur="saveData()"/></td>
+        <td><input type="number" value="${respectLost}" min="0" onblur="saveData()"/></td>
+        <td class="respectTotalCell">${formatNumber(respectEarned - respectLost)}</td>
+        <td class="warHitPayoutCell">${formatMoney(0)}</td>
+        <td class="chainHitPayoutCell">${formatMoney(0)}</td>
+        <td class="totalEarningsCell">${formatMoney(0)}</td>
+        <td>
+          <button class="clearBtn" onclick="clearRow(this)">Clear</button>
+          <button class="removeBtn" onclick="removeRow(this)">Remove</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+      saveData();
+    }
+
+    // Clear a single row's numeric fields and computed columns.
+    function clearRow(button) {
+      const row = button.closest('tr');
+      row.cells[1].querySelector('input').value = 0;
+      row.cells[2].querySelector('input').value = 0;
+      row.cells[3].querySelector('input').value = 0;
+      row.cells[4].querySelector('input').value = 0;
+      row.cells[5].textContent = formatNumber(0);
+      row.cells[6].textContent = formatMoney(0);
+      row.cells[7].textContent = formatMoney(0);
+      row.cells[8].textContent = formatMoney(0);
+      saveData();
+    }
+
+    // Remove an entire row.
+    function removeRow(button) {
+      const row = button.closest('tr');
+      row.remove();
+      saveData();
+    }
+
+    // Clear all rows' numeric fields.
+    function clearAllRows() {
+      document.querySelectorAll('#payoutTable tbody tr').forEach(row => {
+        row.cells[1].querySelector('input').value = 0;
+        row.cells[2].querySelector('input').value = 0;
+        row.cells[3].querySelector('input').value = 0;
+        row.cells[4].querySelector('input').value = 0;
+        row.cells[5].textContent = formatNumber(0);
+        row.cells[6].textContent = formatMoney(0);
+        row.cells[7].textContent = formatMoney(0);
+        row.cells[8].textContent = formatMoney(0);
+      });
+      saveData();
+      calculatePayouts();
+    }
+
+    // Calculate computed fields for each row and update the grand total.
+    function calculatePayouts() {
+      const globalWarPay = parseInt(document.getElementById('globalWarPay').value) || 0;
+      const globalChainPay = parseInt(document.getElementById('globalChainPay').value) || 0;
+      const rows = document.querySelectorAll('#payoutTable tbody tr');
+      let grandTotalBaseEarnings = 0;
+      
+      rows.forEach(row => {
+        const respectEarned = parseInt(row.cells[3].querySelector('input').value) || 0;
+        const respectLost = parseInt(row.cells[4].querySelector('input').value) || 0;
+        const chainHits = parseInt(row.cells[2].querySelector('input').value) || 0;
+        const respectTotal = respectEarned - respectLost;
+        row.cells[5].textContent = formatNumber(respectTotal);
+        // War Hit Payout is Respect Total * global War Pay.
+        const warHitPayout = respectTotal * globalWarPay;
+        row.cells[6].textContent = formatMoney(warHitPayout);
+        // Chain Hit Payout is Chain Hits * global Chain Pay.
+        const chainHitPayout = chainHits * globalChainPay;
+        row.cells[7].textContent = formatMoney(chainHitPayout);
+        // Total Earnings is the sum of War Hit Payout and Chain Hit Payout.
+        const totalEarnings = warHitPayout + chainHitPayout;
+        row.cells[8].textContent = formatMoney(totalEarnings);
+        grandTotalBaseEarnings += totalEarnings;
+      });
+      
+      document.getElementById('grandTotal').textContent = 'Grand Total Base Earnings: ' + formatMoney(grandTotalBaseEarnings);
+    }
+
+    // Calculate Leader Cut: show Leader Pay and subtract it from Total Cash Available to show Balance.
+    function calculateLeaderCut() {
+      const totalCash = parseInt(document.getElementById('totalCash').value) || 0;
+      const leaderPercent = parseInt(document.getElementById('leaderPercent').value) || 0;
+      const leaderCutAmount = (leaderPercent / 100) * totalCash;
+      const balance = totalCash - leaderCutAmount;
+      document.getElementById('leaderPay').textContent =
+        'Leader Pay: ' + formatMoney(leaderCutAmount) + ' | Balance: ' + formatMoney(balance);
+    }
+
+    // Load saved table data on page load.
+    window.onload = loadData;
+  </script>
+</body>
+</html>
