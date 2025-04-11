@@ -155,8 +155,8 @@
         <input type="number" id="chainPay" value="0" min="0" />
       </div>
       <div>
-        <label for="defendPay">Defend Pay Per Assist:</label>
-        <input type="number" id="defendPay" value="0" min="0" />
+        <label for="assistPay">Assist Pay Per Defend:</label>
+        <input type="number" id="assistPay" value="0" min="0" />
       </div>
     </div>
 
@@ -164,18 +164,18 @@
       <table id="payoutTable">
         <thead>
           <tr>
-            <th>Player</th>
+            <th>Name</th>
             <th>Position</th>
             <th>Attacks</th>
             <th>Chain Hits</th>
-            <th>Defends</th>
-            <th>Respect+</th>
-            <th>Respect-</th>
+            <th>Assists</th>
+            <th>Respect Gain</th>
+            <th>Respect Loss</th>
             <th>Net Respect</th>
             <th>Score</th>
             <th>War Payout</th>
             <th>Chain Payout</th>
-            <th>Defend Payout</th>
+            <th>Assist Payout</th>
             <th>Total</th>
             <th>Actions</th>
           </tr>
@@ -270,20 +270,20 @@
       
       document.querySelectorAll('#payoutTable tbody tr').forEach(row => {
         rows.push({
-          player: row.cells[0].querySelector('.playerName').textContent,
+          name: row.cells[0].querySelector('.playerName').textContent,
           position: row.cells[1].querySelector('input').value,
           attacks: row.cells[2].querySelector('input').value,
-          chainHits: row.cells[3].querySelector('input').value,
-          defends: row.cells[4].querySelector('input').value,
-          respectEarned: row.cells[5].querySelector('input').value,
-          respectLost: row.cells[6].querySelector('input').value,
+          chain_hits: row.cells[3].querySelector('input').value,
+          assists: row.cells[4].querySelector('input').value,
+          respect_gain: row.cells[5].querySelector('input').value,
+          respect_loss: row.cells[6].querySelector('input').value,
           score: row.cells[8].querySelector('input').value,
           tags: Array.from(row.cells[0].querySelectorAll('.tag')).map(t => t.className.replace('tag tag-', ''))
         });
       });
       
       // Save global values
-      ['totalCash', 'leaderPercent', 'warPay', 'chainPay', 'defendPay', 'apiKeyInput', 'factionIdInput']
+      ['totalCash', 'leaderPercent', 'warPay', 'chainPay', 'assistPay', 'apiKeyInput', 'factionIdInput']
         .forEach(id => globals[id] = $(id).value);
       
       localStorage.setItem("tornPayoutData", JSON.stringify(rows));
@@ -293,15 +293,15 @@
     function loadData() {
       // Load global values
       const globals = JSON.parse(localStorage.getItem("tornPayoutGlobals") || '{}');
-      ['totalCash', 'leaderPercent', 'warPay', 'chainPay', 'defendPay', 'apiKeyInput', 'factionIdInput']
+      ['totalCash', 'leaderPercent', 'warPay', 'chainPay', 'assistPay', 'apiKeyInput', 'factionIdInput']
         .forEach(id => $(id).value = globals[id] || (id === 'apiKeyInput' || id === 'factionIdInput' ? '' : '0'));
       
       // Load table rows
       const rows = JSON.parse(localStorage.getItem("tornPayoutData") || '[]');
       if (rows.length) {
         rows.forEach(r => addRow(
-          r.player, r.position, r.attacks, r.chainHits, r.defends,
-          r.respectEarned, r.respectLost, r.score, r.tags || []
+          r.name, r.position, r.attacks, r.chain_hits, r.assists,
+          r.respect_gain, r.respect_loss, r.score, r.tags || []
         ));
       } else {
         addRow(); // Add sample row
@@ -312,8 +312,8 @@
     }
     
     // Row management
-    function addRow(player = 'Player Name', position = '', attacks = 0, chainHits = 0, defends = 0, 
-                   respectEarned = 0, respectLost = 0, score = 0, tags = []) {
+    function addRow(name = 'Player Name', position = '', attacks = 0, chain_hits = 0, assists = 0, 
+                   respect_gain = 0, respect_loss = 0, score = 0, tags = []) {
       const tbody = document.querySelector('#payoutTable tbody');
       const tr = document.createElement('tr');
       
@@ -323,16 +323,16 @@
       
       tr.innerHTML = `
         <td>
-          <span class="playerName" contenteditable="true" onblur="saveData()">${player}</span>
+          <span class="playerName" contenteditable="true" onblur="saveData()">${name}</span>
           ${tagsHTML}
         </td>
         <td><input type="text" value="${position}" onblur="updatePositionTag(this); saveData();" /></td>
         <td><input type="number" value="${attacks}" min="0" onblur="saveData()"/></td>
-        <td><input type="number" value="${chainHits}" min="0" onblur="saveData()"/></td>
-        <td><input type="number" value="${defends}" min="0" onblur="saveData()"/></td>
-        <td><input type="number" value="${respectEarned}" min="0" onblur="saveData()"/></td>
-        <td><input type="number" value="${respectLost}" min="0" onblur="saveData()"/></td>
-        <td>${fmtNum(respectEarned - respectLost)}</td>
+        <td><input type="number" value="${chain_hits}" min="0" onblur="saveData()"/></td>
+        <td><input type="number" value="${assists}" min="0" onblur="saveData()"/></td>
+        <td><input type="number" value="${respect_gain}" min="0" onblur="saveData()"/></td>
+        <td><input type="number" value="${respect_loss}" min="0" onblur="saveData()"/></td>
+        <td>${fmtNum(respect_gain - respect_loss)}</td>
         <td><input type="number" value="${score}" onblur="saveData()" /></td>
         <td>${fmt(0)}</td>
         <td>${fmt(0)}</td>
@@ -402,7 +402,7 @@
     function calculate() {
       const warPay = parseInt($('warPay').value) || 0;
       const chainPay = parseInt($('chainPay').value) || 0;
-      const defendPay = parseInt($('defendPay').value) || 0;
+      const assistPay = parseInt($('assistPay').value) || 0;
       const totalCash = parseInt($('totalCash').value) || 0;
       const leaderPercent = parseInt($('leaderPercent').value) || 0;
       const rows = document.querySelectorAll('#payoutTable tbody tr');
@@ -411,24 +411,24 @@
       
       rows.forEach(row => {
         // Get input values
-        const respectEarned = parseInt(row.cells[5].querySelector('input').value) || 0;
-        const respectLost = parseInt(row.cells[6].querySelector('input').value) || 0;
-        const chainHits = parseInt(row.cells[3].querySelector('input').value) || 0;
-        const defends = parseInt(row.cells[4].querySelector('input').value) || 0;
+        const respect_gain = parseInt(row.cells[5].querySelector('input').value) || 0;
+        const respect_loss = parseInt(row.cells[6].querySelector('input').value) || 0;
+        const chain_hits = parseInt(row.cells[3].querySelector('input').value) || 0;
+        const assists = parseInt(row.cells[4].querySelector('input').value) || 0;
         
         // Calculate payouts
-        const netRespect = respectEarned - respectLost;
+        const netRespect = respect_gain - respect_loss;
         row.cells[7].textContent = fmtNum(netRespect);
         
         const warPayout = netRespect * warPay;
-        const chainPayout = chainHits * chainPay;
-        const defendPayout = defends * defendPay;
-        const totalPayout = warPayout + chainPayout + defendPayout;
+        const chainPayout = chain_hits * chainPay;
+        const assistPayout = assists * assistPay;
+        const totalPayout = warPayout + chainPayout + assistPayout;
         
         // Update cells
         row.cells[9].textContent = fmt(warPayout);
         row.cells[10].textContent = fmt(chainPayout);
-        row.cells[11].textContent = fmt(defendPayout);
+        row.cells[11].textContent = fmt(assistPayout);
         row.cells[12].textContent = fmt(totalPayout);
         
         grandTotal += totalPayout;
@@ -464,7 +464,7 @@
         return;
       }
 
-      let csv = "Player,Position,Attacks,Chain Hits,Defends,Respect+,Respect-,Net Respect,Score,War Payout,Chain Payout,Defend Payout,Total Payout\n";
+      let csv = "Name,Position,Attacks,Chain Hits,Assists,Respect Gain,Respect Loss,Net Respect,Score,War Payout,Chain Payout,Assist Payout,Total Payout\n";
       
       rows.forEach(row => {
         const cols = [
@@ -553,18 +553,21 @@
         
         // Add rows for each player
         Object.entries(players).forEach(([id, p]) => {
-          // Get position if available
-          const position = p.position ?? p.faction_position ?? '';
+          // Map API fields to row data - use exact field names from API
+          // Different API endpoints may use different field names
+          const position = p.position !== undefined ? p.position : p.faction_position;
+          const respect_gain = p.respect_gain !== undefined ? p.respect_gain : p.respect_earned;
+          const respect_loss = p.respect_loss !== undefined ? p.respect_loss : p.respect_lost;
           
           addRow(
             p.name || `Player ${id}`,
             getPosition(position),
-            p.hits || 0,
+            p.attacks || 0,
             p.chain_hits || 0,
-            p.defends || p.assists || 0,
-            p.respect_earned || 0,
-            p.respect_lost || 0,
-            p.points || p.score || 0,
+            p.assists || 0, // Torn API uses "assists" for defends
+            respect_gain || 0,
+            respect_loss || 0, 
+            p.score || 0,
             getTags(position)
           );
         });
